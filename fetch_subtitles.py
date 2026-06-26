@@ -4,7 +4,7 @@
 import subprocess
 import sys
 
-CHANNEL_URL = "https://www.youtube.com/@yurugengo"
+CHANNEL_URL = "https://www.youtube.com/@yurugengo/videos"
 SUBTITLES_DIR = "subtitles"
 
 def main():
@@ -14,7 +14,6 @@ def main():
         "--sub-lang", "ja",
         "--sub-format", "vtt",
         "--skip-download",
-        "--playlist-end", "10",
         "--output", f"{SUBTITLES_DIR}/%(upload_date)s_%(id)s_%(title)s.%(ext)s",
         "--ignore-errors",
         "--no-warnings",
