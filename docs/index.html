@@ -6,44 +6,158 @@
   <title>ゆる言語学ラジオ 字幕検索</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif; background: #f8f9fa; color: #333; }
-    header { background: #1a1a2e; color: #fff; padding: 24px 20px; text-align: center; }
-    header h1 { font-size: 1.5rem; margin-bottom: 8px; }
-    header p { font-size: 0.85rem; opacity: 0.7; }
-    .search-box { max-width: 720px; margin: 32px auto 0; padding: 0 16px; }
-    .search-box input {
-      width: 100%; padding: 14px 18px; font-size: 1.1rem;
-      border: 2px solid #ddd; border-radius: 8px; outline: none;
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: #fff;
+      color: #222;
+      min-height: 100vh;
     }
-    .search-box input:focus { border-color: #4a6cf7; }
-    #stats { max-width: 720px; margin: 12px auto 0; padding: 0 16px; font-size: 0.85rem; color: #888; }
-    #results { max-width: 720px; margin: 20px auto 60px; padding: 0 16px; }
+
+    /* ヘッダー */
+    header {
+      border-bottom: 1px solid #e5e5e5;
+      padding: 32px 20px 28px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      font-size: 0.82rem;
+      color: #888;
+    }
+
+    /* 検索エリア */
+    .search-area {
+      max-width: 680px;
+      margin: 36px auto 0;
+      padding: 0 20px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-row input {
+      flex: 1;
+      padding: 11px 14px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .search-row input:focus {
+      border-color: #555;
+    }
+
+    .search-row button {
+      padding: 11px 20px;
+      font-size: 0.95rem;
+      background: #222;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .search-row button:hover {
+      background: #444;
+    }
+
+    /* 件数表示 */
+    #stats {
+      max-width: 680px;
+      margin: 16px auto 0;
+      padding: 0 20px;
+      font-size: 0.82rem;
+      color: #888;
+    }
+
+    /* 結果リスト */
+    #results {
+      max-width: 680px;
+      margin: 20px auto 80px;
+      padding: 0 20px;
+    }
+
+    /* カード */
     .card {
-      background: #fff; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08); transition: box-shadow 0.15s;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
     }
-    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.13); }
-    .card-title { font-size: 0.85rem; color: #4a6cf7; font-weight: 600; margin-bottom: 6px; }
-    .card-text { font-size: 0.97rem; line-height: 1.7; color: #444; }
-    .card-text mark { background: #fff3cd; border-radius: 3px; padding: 0 2px; }
-    .card-footer { margin-top: 10px; font-size: 0.8rem; color: #999; }
-    .card-footer a { color: #4a6cf7; text-decoration: none; }
-    .card-footer a:hover { text-decoration: underline; }
-    .no-results { text-align: center; color: #aaa; margin-top: 60px; font-size: 1rem; }
-    .loading { text-align: center; color: #aaa; margin-top: 60px; }
+
+    .card-title {
+      font-size: 0.82rem;
+      color: #555;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .card-text {
+      font-size: 0.95rem;
+      line-height: 1.75;
+      color: #333;
+    }
+
+    .card-text mark {
+      background: #fff0b3;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .card-footer {
+      margin-top: 12px;
+      font-size: 0.8rem;
+    }
+
+    .card-footer a {
+      color: #555;
+      text-decoration: none;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 1px;
+    }
+
+    .card-footer a:hover {
+      color: #111;
+      border-bottom-color: #111;
+    }
+
+    .placeholder {
+      text-align: center;
+      color: #bbb;
+      margin-top: 80px;
+      font-size: 0.9rem;
+      line-height: 2;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>ゆる言語学ラジオ 字幕検索</h1>
-    <p>キーワードを入力すると、そのキーワードが話された動画と箇所を一覧表示します</p>
+    <p>キーワードで、あの回を探す</p>
   </header>
 
-  <div class="search-box">
-    <input type="search" id="query" placeholder="例：音韻論、借用語、ソシュール..." autocomplete="off">
+  <div class="search-area">
+    <div class="search-row">
+      <input type="text" id="query" placeholder="例：音韻論、借用語、ソシュール…" autocomplete="off">
+      <button id="search-btn">検索</button>
+    </div>
   </div>
   <div id="stats"></div>
-  <div id="results"><p class="loading">データを読み込んでいます...</p></div>
+  <div id="results"><p class="placeholder">読み込み中…</p></div>
 
   <script>
     let INDEX = [];
@@ -52,10 +166,10 @@
       try {
         const res = await fetch("index.json");
         INDEX = await res.json();
-        document.getElementById("results").innerHTML = "";
-        document.getElementById("stats").textContent = `${INDEX.length.toLocaleString()} 件のチャンク・${countVideos()} 本の動画を読み込みました`;
+        document.getElementById("results").innerHTML = '<p class="placeholder">キーワードを入力して検索してください</p>';
+        document.getElementById("stats").textContent = `${INDEX.length.toLocaleString()} チャンク・${countVideos()} 本を収録`;
       } catch (e) {
-        document.getElementById("results").innerHTML = '<p class="no-results">データの読み込みに失敗しました。</p>';
+        document.getElementById("results").innerHTML = '<p class="placeholder">データの読み込みに失敗しました</p>';
       }
     }
 
@@ -63,57 +177,53 @@
       return new Set(INDEX.map(r => r.id)).size;
     }
 
-    function escape(s) {
+    function esc(s) {
       return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     }
 
-    function highlight(text, query) {
-      const escaped = escape(text);
-      const terms = query.trim().split(/\s+/).filter(Boolean);
-      if (!terms.length) return escaped;
-      const pattern = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
-      return escaped.replace(pattern, "<mark>$1</mark>");
+    function highlight(text, terms) {
+      let s = esc(text);
+      const pat = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+      return s.replace(pat, "<mark>$1</mark>");
     }
 
-    function search(query) {
+    function doSearch() {
+      const query = document.getElementById("query").value;
       const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-      if (!terms.length) return [];
-      return INDEX.filter(r => terms.every(t => r.text.toLowerCase().includes(t) || r.title.toLowerCase().includes(t)));
-    }
-
-    function youtubeUrl(id, startSeconds) {
-      return `https://www.youtube.com/watch?v=${id}&t=${Math.floor(startSeconds)}s`;
-    }
-
-    function renderResults(query) {
-      const resultsEl = document.getElementById("results");
       const statsEl = document.getElementById("stats");
-      if (!query.trim()) {
-        resultsEl.innerHTML = "";
-        statsEl.textContent = `${INDEX.length.toLocaleString()} 件のチャンク・${countVideos()} 本の動画を読み込みました`;
+      const resultsEl = document.getElementById("results");
+
+      if (!terms.length) {
+        resultsEl.innerHTML = '<p class="placeholder">キーワードを入力して検索してください</p>';
+        statsEl.textContent = `${INDEX.length.toLocaleString()} チャンク・${countVideos()} 本を収録`;
         return;
       }
-      const hits = search(query);
+
+      const hits = INDEX.filter(r =>
+        terms.every(t => r.text.toLowerCase().includes(t) || r.title.toLowerCase().includes(t))
+      );
+
       statsEl.textContent = `「${query}」の検索結果：${hits.length} 件`;
+
       if (!hits.length) {
-        resultsEl.innerHTML = '<p class="no-results">該当する字幕が見つかりませんでした。</p>';
+        resultsEl.innerHTML = '<p class="placeholder">該当する字幕が見つかりませんでした</p>';
         return;
       }
+
       resultsEl.innerHTML = hits.slice(0, 200).map(r => `
         <div class="card">
-          <div class="card-title">${highlight(r.title, query)}</div>
-          <div class="card-text">${highlight(r.text, query)}</div>
+          <div class="card-title">${highlight(r.title, terms)}</div>
+          <div class="card-text">${highlight(r.text, terms)}</div>
           <div class="card-footer">
-            <a href="${youtubeUrl(r.id, r.start)}" target="_blank" rel="noopener">▶ ${r.ts} から見る</a>
+            <a href="https://www.youtube.com/watch?v=${r.id}&t=${Math.floor(r.start)}s" target="_blank" rel="noopener">▶ ${r.ts} から見る</a>
           </div>
         </div>
       `).join("");
     }
 
-    let timer;
-    document.getElementById("query").addEventListener("input", e => {
-      clearTimeout(timer);
-      timer = setTimeout(() => renderResults(e.target.value), 200);
+    document.getElementById("search-btn").addEventListener("click", doSearch);
+    document.getElementById("query").addEventListener("keydown", e => {
+      if (e.key === "Enter") doSearch();
     });
 
     loadIndex();
