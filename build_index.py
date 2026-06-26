@@ -3,8 +3,10 @@
 
 import json
 import re
-import urllib.request
+import subprocess
 from pathlib import Path
+
+YTDLP = "/opt/homebrew/bin/yt-dlp"
 
 SUBTITLES_DIR = Path("subtitles")
 OUTPUT_FILE = Path("docs/index.json")
@@ -54,13 +56,14 @@ def seconds_to_hhmmss(s: float) -> str:
     return f"{m}:{sec:02d}"
 
 def is_playable(video_id: str) -> bool:
-    """Return True if the video is publicly playable (via oEmbed API)."""
-    url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
-    try:
-        with urllib.request.urlopen(url, timeout=8) as resp:
-            return resp.status == 200
-    except Exception:
-        return False
+    """Return True if yt-dlp can access the video (catches members-only, age-restricted, deleted, etc.)."""
+    result = subprocess.run(
+        [YTDLP, "--simulate", "--quiet", "--no-warnings",
+         f"https://www.youtube.com/watch?v={video_id}"],
+        capture_output=True,
+        timeout=20,
+    )
+    return result.returncode == 0
 
 def build_index():
     OUTPUT_FILE.parent.mkdir(exist_ok=True)
