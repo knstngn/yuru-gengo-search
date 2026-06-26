@@ -11,43 +11,47 @@
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
       background: #fff;
       color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       min-height: 100vh;
+      padding: 40px 20px;
     }
 
-    /* ヘッダー */
-    header {
-      border-bottom: 1px solid #e5e5e5;
-      padding: 32px 20px 28px;
-      text-align: center;
+    .logo {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 20px;
     }
 
-    header h1 {
-      font-size: 1.4rem;
+    h1 {
+      font-size: 1.3rem;
       font-weight: 700;
       letter-spacing: 0.02em;
       margin-bottom: 6px;
+      text-align: center;
     }
 
-    header p {
+    .subtitle {
       font-size: 0.82rem;
       color: #888;
-    }
-
-    /* 検索エリア */
-    .search-area {
-      max-width: 680px;
-      margin: 36px auto 0;
-      padding: 0 20px;
+      margin-bottom: 32px;
+      text-align: center;
     }
 
     .search-row {
       display: flex;
       gap: 8px;
+      width: 100%;
+      max-width: 560px;
     }
 
     .search-row input {
       flex: 1;
-      padding: 11px 14px;
+      padding: 12px 14px;
       font-size: 1rem;
       border: 1px solid #ccc;
       border-radius: 4px;
@@ -60,7 +64,7 @@
     }
 
     .search-row button {
-      padding: 11px 20px;
+      padding: 12px 22px;
       font-size: 0.95rem;
       background: #222;
       color: #fff;
@@ -74,159 +78,29 @@
     .search-row button:hover {
       background: #444;
     }
-
-    /* 件数表示 */
-    #stats {
-      max-width: 680px;
-      margin: 16px auto 0;
-      padding: 0 20px;
-      font-size: 0.82rem;
-      color: #888;
-    }
-
-    /* 結果リスト */
-    #results {
-      max-width: 680px;
-      margin: 20px auto 80px;
-      padding: 0 20px;
-    }
-
-    /* カード */
-    .card {
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      padding: 16px 18px;
-      margin-bottom: 12px;
-    }
-
-    .card-title {
-      font-size: 0.82rem;
-      color: #555;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    .card-text {
-      font-size: 0.95rem;
-      line-height: 1.75;
-      color: #333;
-    }
-
-    .card-text mark {
-      background: #fff0b3;
-      border-radius: 2px;
-      padding: 0 2px;
-    }
-
-    .card-footer {
-      margin-top: 12px;
-      font-size: 0.8rem;
-    }
-
-    .card-footer a {
-      color: #555;
-      text-decoration: none;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 1px;
-    }
-
-    .card-footer a:hover {
-      color: #111;
-      border-bottom-color: #111;
-    }
-
-    .placeholder {
-      text-align: center;
-      color: #bbb;
-      margin-top: 80px;
-      font-size: 0.9rem;
-      line-height: 2;
-    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>ゆる言語学ラジオ 字幕検索</h1>
-    <p>キーワードで、あの回を探す</p>
-  </header>
+  <img class="logo" src="logo.jpg" alt="ゆる言語学ラジオ">
+  <h1>ゆる言語学ラジオ 字幕検索</h1>
+  <p class="subtitle">キーワードで、あの回を探す</p>
 
-  <div class="search-area">
-    <div class="search-row">
-      <input type="text" id="query" placeholder="例：音韻論、借用語、ソシュール…" autocomplete="off">
-      <button id="search-btn">検索</button>
-    </div>
+  <div class="search-row">
+    <input type="text" id="query" placeholder="例：音韻論、借用語、ソシュール…" autocomplete="off">
+    <button id="search-btn">検索</button>
   </div>
-  <div id="stats"></div>
-  <div id="results"><p class="placeholder">読み込み中…</p></div>
 
   <script>
-    let INDEX = [];
-
-    async function loadIndex() {
-      try {
-        const res = await fetch("index.json");
-        INDEX = await res.json();
-        document.getElementById("results").innerHTML = '<p class="placeholder">キーワードを入力して検索してください</p>';
-        document.getElementById("stats").textContent = `${INDEX.length.toLocaleString()} チャンク・${countVideos()} 本を収録`;
-      } catch (e) {
-        document.getElementById("results").innerHTML = '<p class="placeholder">データの読み込みに失敗しました</p>';
-      }
-    }
-
-    function countVideos() {
-      return new Set(INDEX.map(r => r.id)).size;
-    }
-
-    function esc(s) {
-      return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-    }
-
-    function highlight(text, terms) {
-      let s = esc(text);
-      const pat = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
-      return s.replace(pat, "<mark>$1</mark>");
-    }
-
     function doSearch() {
-      const query = document.getElementById("query").value;
-      const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-      const statsEl = document.getElementById("stats");
-      const resultsEl = document.getElementById("results");
-
-      if (!terms.length) {
-        resultsEl.innerHTML = '<p class="placeholder">キーワードを入力して検索してください</p>';
-        statsEl.textContent = `${INDEX.length.toLocaleString()} チャンク・${countVideos()} 本を収録`;
-        return;
-      }
-
-      const hits = INDEX.filter(r =>
-        terms.every(t => r.text.toLowerCase().includes(t) || r.title.toLowerCase().includes(t))
-      );
-
-      statsEl.textContent = `「${query}」の検索結果：${hits.length} 件`;
-
-      if (!hits.length) {
-        resultsEl.innerHTML = '<p class="placeholder">該当する字幕が見つかりませんでした</p>';
-        return;
-      }
-
-      resultsEl.innerHTML = hits.slice(0, 200).map(r => `
-        <div class="card">
-          <div class="card-title">${highlight(r.title, terms)}</div>
-          <div class="card-text">${highlight(r.text, terms)}</div>
-          <div class="card-footer">
-            <a href="https://www.youtube.com/watch?v=${r.id}&t=${Math.floor(r.start)}s" target="_blank" rel="noopener">▶ ${r.ts} から見る</a>
-          </div>
-        </div>
-      `).join("");
+      const q = document.getElementById("query").value.trim();
+      if (!q) return;
+      location.href = "results.html?q=" + encodeURIComponent(q);
     }
 
     document.getElementById("search-btn").addEventListener("click", doSearch);
     document.getElementById("query").addEventListener("keydown", e => {
       if (e.key === "Enter") doSearch();
     });
-
-    loadIndex();
   </script>
 </body>
 </html>

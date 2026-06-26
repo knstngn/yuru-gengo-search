@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>検索結果 — ゆる言語学ラジオ 字幕検索</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: #fff;
+      color: #222;
+    }
+
+    /* ヘッダー */
+    header {
+      border-bottom: 1px solid #e5e5e5;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    header img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* 検索バー */
+    .search-area {
+      max-width: 720px;
+      margin: 28px auto 0;
+      padding: 0 24px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-area input {
+      flex: 1;
+      padding: 11px 14px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .search-area input:focus {
+      border-color: #555;
+    }
+
+    .search-area button {
+      padding: 11px 20px;
+      font-size: 0.95rem;
+      background: #222;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .search-area button:hover {
+      background: #444;
+    }
+
+    /* 件数 */
+    #stats {
+      max-width: 720px;
+      margin: 14px auto 0;
+      padding: 0 24px;
+      font-size: 0.82rem;
+      color: #888;
+    }
+
+    /* グリッド */
+    #results {
+      max-width: 720px;
+      margin: 20px auto 80px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    /* 動画カード */
+    .card {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .card:hover {
+      border-color: #aaa;
+    }
+
+    .card img {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      display: block;
+      background: #f0f0f0;
+    }
+
+    .card-body {
+      padding: 10px 12px;
+    }
+
+    .card-title {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      font-weight: 600;
+    }
+
+    /* プレースホルダー */
+    .placeholder {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: #bbb;
+      padding: 80px 0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">
+      <img src="logo.jpg" alt="ゆる言語学ラジオ">
+      <h1>ゆる言語学ラジオ 字幕検索</h1>
+    </a>
+  </header>
+
+  <div class="search-area">
+    <input type="text" id="query" autocomplete="off">
+    <button id="search-btn">検索</button>
+  </div>
+  <div id="stats"></div>
+  <div id="results"><p class="placeholder">読み込み中…</p></div>
+
+  <script>
+    let INDEX = [];
+
+    function getQuery() {
+      return new URLSearchParams(location.search).get("q") || "";
+    }
+
+    async function loadIndex() {
+      const res = await fetch("index.json");
+      INDEX = await res.json();
+    }
+
+    function search(terms) {
+      // チャンクを検索してヒットした動画IDを収集（重複除去）
+      const seen = new Map();
+      for (const r of INDEX) {
+        if (seen.has(r.id)) continue;
+        if (terms.every(t => r.text.toLowerCase().includes(t) || r.title.toLowerCase().includes(t))) {
+          seen.set(r.id, r);
+        }
+      }
+      return [...seen.values()];
+    }
+
+    function render(query) {
+      const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const statsEl = document.getElementById("stats");
+      const resultsEl = document.getElementById("results");
+
+      if (!terms.length) {
+        resultsEl.innerHTML = '<p class="placeholder">キーワードを入力して検索してください</p>';
+        statsEl.textContent = "";
+        return;
+      }
+
+      const hits = search(terms);
+      statsEl.textContent = `「${query}」の検索結果：${hits.length} 本`;
+
+      if (!hits.length) {
+        resultsEl.innerHTML = '<p class="placeholder">該当する動画が見つかりませんでした</p>';
+        return;
+      }
+
+      resultsEl.innerHTML = hits.map(r => `
+        <a class="card" href="https://www.youtube.com/watch?v=${r.id}" target="_blank" rel="noopener">
+          <img src="https://img.youtube.com/vi/${r.id}/mqdefault.jpg" alt="${r.title}" loading="lazy">
+          <div class="card-body">
+            <div class="card-title">${r.title}</div>
+          </div>
+        </a>
+      `).join("");
+    }
+
+    function doSearch() {
+      const q = document.getElementById("query").value.trim();
+      if (!q) return;
+      history.pushState({}, "", "results.html?q=" + encodeURIComponent(q));
+      render(q);
+    }
+
+    document.getElementById("search-btn").addEventListener("click", doSearch);
+    document.getElementById("query").addEventListener("keydown", e => {
+      if (e.key === "Enter") doSearch();
+    });
+
+    (async () => {
+      await loadIndex();
+      const q = getQuery();
+      document.getElementById("query").value = q;
+      render(q);
+    })();
+  </script>
+</body>
+</html>
