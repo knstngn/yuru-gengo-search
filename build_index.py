@@ -3,10 +3,7 @@
 
 import json
 import re
-import subprocess
 from pathlib import Path
-
-YTDLP = "/opt/homebrew/bin/yt-dlp"
 
 SUBTITLES_DIR = Path("subtitles")
 OUTPUT_FILE = Path("docs/index.json")
@@ -55,23 +52,12 @@ def seconds_to_hhmmss(s: float) -> str:
         return f"{h}:{m:02d}:{sec:02d}"
     return f"{m}:{sec:02d}"
 
-def is_playable(video_id: str) -> bool:
-    """Return True if yt-dlp can access the video (catches members-only, age-restricted, deleted, etc.)."""
-    result = subprocess.run(
-        [YTDLP, "--simulate", "--quiet", "--no-warnings",
-         f"https://www.youtube.com/watch?v={video_id}"],
-        capture_output=True,
-        timeout=20,
-    )
-    return result.returncode == 0
-
 def build_index():
     OUTPUT_FILE.parent.mkdir(exist_ok=True)
     vtt_files = sorted(SUBTITLES_DIR.glob("*.vtt"))
     print(f"Found {len(vtt_files)} subtitle files.")
 
     records = []
-    skipped = 0
     for vtt_path in vtt_files:
         # Filename: YYYYMMDD_VIDEOID_TITLE.ja.vtt
         # YouTube video IDs are always exactly 11 chars, so parse by position.
@@ -85,11 +71,6 @@ def build_index():
         else:
             video_id = stem
             title = stem
-
-        if not is_playable(video_id):
-            print(f"  [SKIP] {title} ({video_id}) — 再生不可")
-            skipped += 1
-            continue
 
         cues = parse_vtt(vtt_path)
         # Merge nearby cues into ~30-second chunks for better search snippets
@@ -105,8 +86,7 @@ def build_index():
         print(f"  {title}: {len(chunks)} chunks")
 
     OUTPUT_FILE.write_text(json.dumps(records, ensure_ascii=False, indent=None), encoding="utf-8")
-    print(f"\nSkipped {skipped} unavailable videos.")
-    print(f"Wrote {len(records)} records to {OUTPUT_FILE}")
+    print(f"\nWrote {len(records)} records to {OUTPUT_FILE}")
 
 def merge_cues(cues: list[dict], window: float = 30) -> list[dict]:
     """Group cues into chunks of ~window seconds."""
