@@ -2,8 +2,8 @@
 """Parse downloaded .vtt subtitle files and build search index JSON."""
 
 import json
-import os
 import re
+import urllib.request
 from pathlib import Path
 
 SUBTITLES_DIR = Path("subtitles")
@@ -53,23 +53,40 @@ def seconds_to_hhmmss(s: float) -> str:
         return f"{h}:{m:02d}:{sec:02d}"
     return f"{m}:{sec:02d}"
 
+def is_playable(video_id: str) -> bool:
+    """Return True if the video is publicly playable (via oEmbed API)."""
+    url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
+    try:
+        with urllib.request.urlopen(url, timeout=8) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
 def build_index():
     OUTPUT_FILE.parent.mkdir(exist_ok=True)
     vtt_files = sorted(SUBTITLES_DIR.glob("*.vtt"))
     print(f"Found {len(vtt_files)} subtitle files.")
 
     records = []
+    skipped = 0
     for vtt_path in vtt_files:
         # Filename: YYYYMMDD_VIDEOID_TITLE.ja.vtt
+        # YouTube video IDs are always exactly 11 chars, so parse by position.
         stem = vtt_path.stem  # strips last .vtt
         if stem.endswith(".ja"):
             stem = stem[:-3]
-        parts = stem.split("_", 2)
-        if len(parts) < 3:
+        # stem = "YYYYMMDD_XXXXXXXXXXX_title"  (8 + 1 + 11 + 1 = 21 prefix chars)
+        if len(stem) >= 21 and stem[8] == "_" and stem[20] == "_":
+            video_id = stem[9:20]
+            title = stem[21:]
+        else:
             video_id = stem
             title = stem
-        else:
-            _, video_id, title = parts
+
+        if not is_playable(video_id):
+            print(f"  [SKIP] {title} ({video_id}) — 再生不可")
+            skipped += 1
+            continue
 
         cues = parse_vtt(vtt_path)
         # Merge nearby cues into ~30-second chunks for better search snippets
@@ -85,7 +102,8 @@ def build_index():
         print(f"  {title}: {len(chunks)} chunks")
 
     OUTPUT_FILE.write_text(json.dumps(records, ensure_ascii=False, indent=None), encoding="utf-8")
-    print(f"\nWrote {len(records)} records to {OUTPUT_FILE}")
+    print(f"\nSkipped {skipped} unavailable videos.")
+    print(f"Wrote {len(records)} records to {OUTPUT_FILE}")
 
 def merge_cues(cues: list[dict], window: float = 30) -> list[dict]:
     """Group cues into chunks of ~window seconds."""
