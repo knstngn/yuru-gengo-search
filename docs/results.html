@@ -175,7 +175,15 @@
       [VIDEOS, NGRAMS] = await Promise.all([vRes.json(), nRes.json()]);
     }
 
+    function normalize(s) {
+      // カタカナ→ひらがな変換（ァ=0x30A1, ヶ=0x30F6）
+      return s.replace(/[ァ-ヶ]/g, ch =>
+        String.fromCharCode(ch.charCodeAt(0) - 0x60)
+      );
+    }
+
     function getNgrams(s, n = 2) {
+      s = normalize(s);
       const result = new Set();
       for (let i = 0; i <= s.length - n; i++) result.add(s.slice(i, i + n));
       return [...result];

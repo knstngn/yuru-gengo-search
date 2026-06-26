@@ -25,7 +25,15 @@ def parse_vtt(filepath: Path) -> set[str]:
             seen.add(clean)
     return seen
 
+def normalize(text: str) -> str:
+    """カタカナをひらがなに変換して検索を表記ゆれに対応させる。"""
+    return "".join(
+        chr(ord(ch) - 0x60) if "ァ" <= ch <= "ヶ" else ch
+        for ch in text
+    )
+
 def get_ngrams(text: str, n: int = 2) -> set[str]:
+    text = normalize(text)
     return {text[i:i+n] for i in range(len(text) - n + 1)}
 
 def build_index():
