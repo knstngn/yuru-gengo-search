@@ -160,41 +160,69 @@
   <div id="results"><p class="placeholder">読み込み中…</p></div>
 
   <script>
-    let INDEX = [];
+    let VIDEOS = [];  // [{id, title}]
+    let NGRAMS = {};  // {bigram: [videoIndex, ...]}
 
     function getQuery() {
       return new URLSearchParams(location.search).get("q") || "";
     }
 
     async function loadIndex() {
-      const res = await fetch("index.json");
-      INDEX = await res.json();
+      const [vRes, nRes] = await Promise.all([
+        fetch("videos.json"),
+        fetch("ngrams.json"),
+      ]);
+      [VIDEOS, NGRAMS] = await Promise.all([vRes.json(), nRes.json()]);
     }
 
-    function search(terms) {
-      // チャンクを検索してヒットした動画IDを収集（重複除去）
-      const seen = new Map();
-      for (const r of INDEX) {
-        if (seen.has(r.id)) continue;
-        if (terms.every(t => r.text.toLowerCase().includes(t) || r.title.toLowerCase().includes(t))) {
-          seen.set(r.id, r);
-        }
+    function getNgrams(s, n = 2) {
+      const result = new Set();
+      for (let i = 0; i <= s.length - n; i++) result.add(s.slice(i, i + n));
+      return [...result];
+    }
+
+    function searchTerm(term) {
+      const ngs = getNgrams(term, 2);
+      if (ngs.length === 0) {
+        // 1文字以下: タイトルのみで絞る
+        return new Set(
+          VIDEOS.map((v, i) => v.title.includes(term) ? i : -1).filter(i => i >= 0)
+        );
       }
-      return [...seen.values()];
+      let matches = new Set(NGRAMS[ngs[0]] || []);
+      for (const ng of ngs.slice(1)) {
+        const m = new Set(NGRAMS[ng] || []);
+        for (const i of matches) if (!m.has(i)) matches.delete(i);
+      }
+      return matches;
+    }
+
+    function search(query) {
+      const terms = query.trim().split(/\s+/).filter(Boolean);
+      if (!terms.length) return [];
+      let result = searchTerm(terms[0]);
+      for (const term of terms.slice(1)) {
+        const m = searchTerm(term);
+        for (const i of result) if (!m.has(i)) result.delete(i);
+      }
+      return [...result].map(i => VIDEOS[i]);
+    }
+
+    function esc(s) {
+      return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     }
 
     function render(query) {
-      const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
       const statsEl = document.getElementById("stats");
       const resultsEl = document.getElementById("results");
 
-      if (!terms.length) {
+      if (!query.trim()) {
         resultsEl.innerHTML = '<p class="placeholder">キーワードを入力して検索してください</p>';
         statsEl.textContent = "";
         return;
       }
 
-      const hits = search(terms);
+      const hits = search(query);
       statsEl.textContent = `「${query}」の検索結果：${hits.length} 本`;
 
       if (!hits.length) {
@@ -202,11 +230,11 @@
         return;
       }
 
-      resultsEl.innerHTML = hits.map(r => `
-        <a class="card" href="https://www.youtube.com/watch?v=${r.id}" target="_blank" rel="noopener">
-          <img src="https://img.youtube.com/vi/${r.id}/mqdefault.jpg" alt="${r.title}" loading="lazy">
+      resultsEl.innerHTML = hits.map(v => `
+        <a class="card" href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">
+          <img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" alt="${esc(v.title)}" loading="lazy">
           <div class="card-body">
-            <div class="card-title">${r.title}</div>
+            <div class="card-title">${esc(v.title)}</div>
           </div>
         </a>
       `).join("");
